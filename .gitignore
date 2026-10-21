@@ -1,0 +1,29 @@
+.DS_Store
+.idea/
+.vscode/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Large or generated data
+data/raw/
+data/interim/
+data/processed/*.csv
+data/processed/*.parquet
+*.nc
+*.nc4
+
+# Generated models and results
+models/*
+!models/.gitkeep
+results/*
+!results/.gitkeep
+*.pt
+*.pth
+
+# Secrets and local configuration
+.env
+*.key
+secrets.*
