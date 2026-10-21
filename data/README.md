@@ -13,7 +13,7 @@ Training and testing data come from NOAA Climate Data Online/NCEI:
 - daily minimum temperature; and
 - station ID, time, latitude, longitude, elevation, units, and quality flags.
 
-The initial Illinois collection contains 91 stations with 15-minute data and 161 stations with hourly data. These are raw-source counts and may decrease after temporal alignment and quality control. Stations in neighboring states may be added to reduce boundary effects, following the regional approach in the reference study.
+The initial Illinois collection contains 91 stations with 15-minute data and 161 stations with hourly data. These are raw-source counts and may decrease after temporal alignment and quality control. Stations in neighboring states may be added to increase regional coverage and reduce boundary effects.
 
 ## NARCCAP simulations
 

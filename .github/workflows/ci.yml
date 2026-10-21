@@ -14,3 +14,5 @@ jobs:
           python-version: "3.11"
       - run: python -m pip install -r requirements.txt
       - run: pytest -q
+      - run: python scripts/make_demo_data.py --output /tmp/demo.csv --rows 120
+      - run: python -m src.train --data /tmp/demo.csv --task 3h_to_2h --epochs 2 --output /tmp/demo-results

@@ -1,6 +1,6 @@
 # CEE 598 Project: Temporal Downscaling of Precipitation in Illinois
 
-This repository contains the data-processing and neural-network framework for a CEE 598 project on temporal downscaling of precipitation. The project adapts the workflow of Al Kajbaf, Bensi, and Brubaker (2022) from Maryland to Illinois.
+This repository contains the data-processing and neural-network framework for a CEE 598 project on temporal downscaling of precipitation in Illinois.
 
 ## Project objective
 
@@ -33,24 +33,24 @@ The target is precipitation depth at the finer duration. This is a regression pr
 
 ## ANN architecture
 
-The baseline model follows the reference study as closely as practical:
+The baseline neural network has the following architecture:
 
 ```text
 4 input features -> 10 sigmoid hidden neurons -> 1 linear output
 ```
 
-The reference study used MATLAB with Levenberg-Marquardt optimization and Bayesian regularization. This implementation preserves the network architecture but uses PyTorch, mean squared error, Adam optimization, and validation-based early stopping.
+The model is implemented in PyTorch and trained using mean squared error, Adam optimization, and validation-based early stopping.
 
 ## Spatial extension
 
-A feedforward ANN does not automatically learn spatial relationships. An optional spatial-feature model adds:
+A feedforward ANN processes each station-time observation independently. An optional spatial-feature model adds:
 
 - station or grid-cell latitude, longitude, and elevation;
 - inverse-distance-weighted precipitation from nearby locations;
 - neighboring precipitation maximum; and
 - neighboring precipitation standard deviation.
 
-The spatial model will be compared with the four-input baseline. Station-based holdout splitting is supported so that the spatial generalization test does not place the same station in both training and testing data.
+The spatial model will be evaluated against the four-input baseline. Station-based holdout splitting is supported so that the spatial generalization test does not place the same station in both training and testing data.
 
 ## Expected processed data
 
@@ -75,6 +75,7 @@ Column names can be changed in the source code if the final NOAA export uses a d
 ```text
 .
 ├── data/README.md          # Data sources, schema, and preprocessing contract
+├── scripts/make_demo_data.py # Generate a small synthetic test dataset
 ├── scripts/train_all.py    # Train all four models sequentially
 ├── src/model.py            # Feedforward precipitation ANN
 ├── src/train.py            # Splitting, standardization, training, and evaluation
@@ -111,6 +112,7 @@ python -m src.train \
   --data data/processed/training_table.csv \
   --task 3h_to_2h \
   --spatial \
+  --split station \
   --output results/3h_to_2h_spatial
 ```
 
@@ -126,6 +128,21 @@ python scripts/train_all.py \
 
 Add `--spatial` to train the spatial-feature versions.
 
+## Test the pipeline with synthetic data
+
+The following commands generate a small artificial dataset and verify that the training pipeline runs from beginning to end. The generated values are for software testing only and are not scientific results.
+
+```bash
+python scripts/make_demo_data.py \
+  --output data/processed/demo_training_table.csv
+
+python -m src.train \
+  --data data/processed/demo_training_table.csv \
+  --task 3h_to_2h \
+  --epochs 10 \
+  --output results/demo
+```
+
 Each run writes:
 
 - `model.pt`: trained parameters and standardization statistics;
@@ -139,7 +156,3 @@ Each run writes:
 Performance will be evaluated with MAE, RMSE, Pearson correlation, and R-squared. Errors will also be reported for larger precipitation observations because annual maxima and IDF analysis are sensitive to the upper tail. Predictions will be checked for negative or otherwise physically unreasonable values.
 
 After evaluation on held-out NOAA observations, the four trained models will be applied sequentially to Illinois NARCCAP historical (1971-2000) and future (2041-2070) simulations.
-
-## Reference
-
-Al Kajbaf, A., Bensi, M., & Brubaker, K. L. (2022). Temporal downscaling of precipitation from climate model projections using machine learning. *Stochastic Environmental Research and Risk Assessment, 36*, 2173-2194. https://doi.org/10.1007/s00477-022-02259-2

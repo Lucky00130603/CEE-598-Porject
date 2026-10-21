@@ -47,8 +47,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--split",
         choices=("station", "random"),
-        default="station",
-        help="Use station holdout by default to test spatial generalization.",
+        default="random",
+        help="Use random splitting for baseline runs or station holdout for spatial generalization.",
     )
     parser.add_argument("--epochs", type=int, default=500)
     parser.add_argument("--patience", type=int, default=40)

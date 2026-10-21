@@ -15,9 +15,7 @@ data/processed/*.parquet
 *.nc
 *.nc4
 
-# Generated models and results
-models/*
-!models/.gitkeep
+# Generated results and trained weights
 results/*
 !results/.gitkeep
 *.pt

@@ -16,7 +16,7 @@ def main() -> None:
     parser.add_argument("--data", required=True, type=Path)
     parser.add_argument("--output-root", required=True, type=Path)
     parser.add_argument("--spatial", action="store_true")
-    parser.add_argument("--split", choices=("station", "random"), default="station")
+    parser.add_argument("--split", choices=("station", "random"), default="random")
     parser.add_argument("--epochs", type=int, default=500)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
