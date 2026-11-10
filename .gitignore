@@ -18,6 +18,10 @@ data/processed/*.parquet
 # Generated results and trained weights
 results/*
 !results/.gitkeep
+!results/report2/
+!results/report2/*.json
+!results/report2/*.csv
+!results/report2/*.png
 *.pt
 *.pth
 

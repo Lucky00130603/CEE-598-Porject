@@ -1,10 +1,10 @@
 # CEE 598 Project: Temporal Downscaling of Precipitation in Illinois
 
-This repository contains the data-processing and neural-network framework for a CEE 598 project on temporal downscaling of precipitation in Illinois.
+This repository contains the data-processing, training, and evaluation workflow for a CEE 598 project on temporal downscaling of precipitation in Illinois.
 
 ## Project objective
 
-The objective is to train artificial neural networks (ANNs) with NOAA observations and then apply the trained models to 3-hour NARCCAP climate-model precipitation. Four regression models are trained independently and applied sequentially:
+Four regression models are trained independently and will ultimately be applied sequentially:
 
 ```text
 3-hour precipitation
@@ -14,73 +14,52 @@ The objective is to train artificial neural networks (ANNs) with NOAA observatio
         -> ANN 4 -> 15-minute precipitation
 ```
 
-For each model, the baseline predictors are:
+Each model uses four predictors: precipitation at the preceding longer duration, daily precipitation, daily maximum temperature, and daily minimum temperature. Temperature is retained because it provides daily meteorological context and supports the model specification adopted by the project team.
 
-1. precipitation at the preceding longer duration;
-2. daily precipitation;
-3. daily maximum temperature; and
-4. daily minimum temperature.
+## Current progress
 
-The target is precipitation depth at the finer duration. This is a regression project, not a classification project.
+- Four NOAA observation-pair tables have been assembled and quality controlled.
+- The tables contain 1,630,093 raw records and 1,594,662 retained records from 49-52 Illinois stations.
+- All four baseline ANNs have completed preliminary training.
+- The held-out test-set R-squared values range from 0.902 to 0.965.
+- Reproducible data summaries, metrics, diagnostics, and figures are available in [`results/report2`](results/report2).
+- Spatial predictors and application to NARCCAP simulations remain future work; the current paired files do not yet include station coordinates or neighboring-station features.
 
-## Current status
+These are preliminary progress-report results, not finalized scientific estimates.
 
-- The PyTorch model architecture and reproducible training pipeline are implemented.
-- The four temporal-downscaling tasks are configured.
-- Metrics, early stopping, prediction export, and train/validation/test splitting are implemented.
-- NOAA preprocessing and final input-target table construction are in progress.
-- No final scientific results are claimed in this repository yet.
+## Data schema and quality control
 
-## ANN architecture
+The training code directly supports one CSV for each downscaling task. Required columns are:
 
-The baseline neural network has the following architecture:
+```text
+STATION,timestamp,P_in,P_target,P_d,Tmax_d,Tmin_d
+```
+
+`P_in` is the preceding longer-duration precipitation, `P_target` is the finer-duration target, and `P_d`, `Tmax_d`, and `Tmin_d` are the daily precipitation, maximum temperature, and minimum temperature variables.
+
+By default, training removes rows with missing required values, negative precipitation, target precipitation greater than input precipitation, subdaily precipitation greater than daily precipitation, or daily minimum temperature greater than daily maximum temperature. The number of rows affected by each check is recorded in `data_summary.json`.
+
+## ANN and evaluation
+
+The baseline network is:
 
 ```text
 4 input features -> 10 sigmoid hidden neurons -> 1 linear output
 ```
 
-The model is implemented in PyTorch and trained using mean squared error, Adam optimization, and validation-based early stopping.
-
-## Spatial extension
-
-A feedforward ANN processes each station-time observation independently. An optional spatial-feature model adds:
-
-- station or grid-cell latitude, longitude, and elevation;
-- inverse-distance-weighted precipitation from nearby locations;
-- neighboring precipitation maximum; and
-- neighboring precipitation standard deviation.
-
-The spatial model will be evaluated against the four-input baseline. Station-based holdout splitting is supported so that the spatial generalization test does not place the same station in both training and testing data.
-
-## Expected processed data
-
-The training script expects one CSV containing aligned NOAA observations. Required columns are:
-
-```text
-station_id,timestamp,p_3h,p_2h,p_1h,p_30min,p_15min,
-daily_precip,tmax,tmin
-```
-
-Optional spatial columns are:
-
-```text
-latitude,longitude,elevation,
-neighbor_idw_mean,neighbor_max,neighbor_std
-```
-
-Column names can be changed in the source code if the final NOAA export uses a different convention. Raw NOAA and NARCCAP files are intentionally excluded from Git because they are large and may have distribution constraints. See [`data/README.md`](data/README.md).
+The implementation uses PyTorch, mean squared error, Adam optimization, train-only standardization, validation-based model selection, and a reproducible random 56/14/30 percent train/validation/test split. Each run reports MAE, RMSE, Pearson correlation, R-squared, large-event metrics, a persistence baseline, and a fitted duration-scaling baseline.
 
 ## Repository structure
 
 ```text
 .
-├── data/README.md          # Data sources, schema, and preprocessing contract
-├── scripts/make_demo_data.py # Generate a small synthetic test dataset
-├── scripts/train_all.py    # Train all four models sequentially
+├── data/                   # Data notes and the uploaded NOAA archive
+├── results/report2/        # Lightweight summaries and report figures
+├── scripts/train_all.py    # Train the four paired-data models
+├── scripts/summarize_report2.py
 ├── src/model.py            # Feedforward precipitation ANN
-├── src/train.py            # Splitting, standardization, training, and evaluation
-├── tests/test_model.py     # Basic model tests
-├── requirements.txt
+├── src/train.py            # Quality control, training, and evaluation
+├── tests/                  # Unit tests
 └── .github/workflows/ci.yml
 ```
 
@@ -94,65 +73,47 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-## Train one downscaling model
-
-Baseline model:
+## Train one model
 
 ```bash
 python -m src.train \
-  --data data/processed/training_table.csv \
+  --data data/processed/pairs_3h_to_2h.csv \
   --task 3h_to_2h \
-  --output results/3h_to_2h
-```
-
-Spatial-feature model:
-
-```bash
-python -m src.train \
-  --data data/processed/training_table.csv \
-  --task 3h_to_2h \
-  --spatial \
-  --split station \
-  --output results/3h_to_2h_spatial
+  --epochs 60 \
+  --patience 8 \
+  --batch-size 4096 \
+  --learning-rate 0.003 \
+  --output results/training/3h_to_2h
 ```
 
 Available task names are `3h_to_2h`, `2h_to_1h`, `1h_to_30min`, and `30min_to_15min`.
 
 ## Train all four models
 
+Place the four `pairs_*.csv` files in one directory, then run:
+
 ```bash
 python scripts/train_all.py \
-  --data data/processed/training_table.csv \
-  --output-root results/baseline
+  --data-dir data/processed \
+  --epochs 60 \
+  --patience 8 \
+  --batch-size 4096 \
+  --learning-rate 0.003 \
+  --output-root results/training
 ```
 
-Add `--spatial` to train the spatial-feature versions.
+Each task writes `model.pt`, `metrics.json`, `predictions.csv`, `history.csv`, and `data_summary.json`. Model weights and row-level predictions are intentionally excluded from version control; the compact summaries in `results/report2` are tracked.
 
-## Test the pipeline with synthetic data
-
-The following commands generate a small artificial dataset and verify that the training pipeline runs from beginning to end. The generated values are for software testing only and are not scientific results.
+## Reproduce the Report II summaries
 
 ```bash
-python scripts/make_demo_data.py \
-  --output data/processed/demo_training_table.csv
-
-python -m src.train \
-  --data data/processed/demo_training_table.csv \
-  --task 3h_to_2h \
-  --epochs 10 \
-  --output results/demo
+python scripts/summarize_report2.py \
+  --output-root results/training \
+  --summary-dir results/report2
 ```
 
-Each run writes:
+## Run tests
 
-- `model.pt`: trained parameters and standardization statistics;
-- `metrics.json`: MAE, RMSE, correlation, R-squared, and negative-prediction rate;
-- `predictions.csv`: observed and predicted test values;
-- `history.csv`: training and validation losses; and
-- `data_summary.json`: final sample counts and target statistics.
-
-## Planned evaluation
-
-Performance will be evaluated with MAE, RMSE, Pearson correlation, and R-squared. Errors will also be reported for larger precipitation observations because annual maxima and IDF analysis are sensitive to the upper tail. Predictions will be checked for negative or otherwise physically unreasonable values.
-
-After evaluation on held-out NOAA observations, the four trained models will be applied sequentially to Illinois NARCCAP historical (1971-2000) and future (2041-2070) simulations.
+```bash
+pytest -q
+```
