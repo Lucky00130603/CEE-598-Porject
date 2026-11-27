@@ -1,0 +1,65 @@
+{
+  "task": "2h_to_1h",
+  "schema": "paired",
+  "features": [
+    "P_in",
+    "P_d",
+    "Tmax_d",
+    "Tmin_d",
+    "latitude",
+    "longitude",
+    "elevation",
+    "neighbor_idw_mean",
+    "neighbor_max",
+    "neighbor_std"
+  ],
+  "target": "P_target",
+  "cleaning": {
+    "raw_rows": 477,
+    "missing_required_rows": 0,
+    "negative_precipitation_rows": 0,
+    "target_exceeds_input_rows": 0,
+    "input_exceeds_daily_rows": 6,
+    "target_exceeds_daily_rows": 0,
+    "temperature_inversion_rows": 0,
+    "removed_union_rows": 6,
+    "final_rows": 471
+  },
+  "training_samples": 269,
+  "validation_samples": 63,
+  "testing_samples": 139,
+  "station_count": 11,
+  "station_ids_by_split": {
+    "train": [
+      "COOP:114710",
+      "COOP:115768",
+      "COOP:117391",
+      "COOP:117876",
+      "COOP:118389"
+    ],
+    "validation": [
+      "COOP:113290",
+      "COOP:114355"
+    ],
+    "test": [
+      "COOP:113262",
+      "COOP:116610",
+      "COOP:118781",
+      "COOP:118916"
+    ]
+  },
+  "timestamp_start": "1982-07-03 08:00:00",
+  "timestamp_end": "2013-12-22 08:00:00",
+  "target_statistics": {
+    "count": 471,
+    "zero_fraction": 0.12951167728237792,
+    "mean": 0.14048832271762207,
+    "standard_deviation": 0.11835744352519209,
+    "minimum": 0.0,
+    "median": 0.1,
+    "p90": 0.3,
+    "p95": 0.36,
+    "p99": 0.5,
+    "maximum": 0.8
+  }
+}

@@ -1,0 +1,5 @@
+task,negative_count,negative_fraction,negative_min,negative_mean,negative_with_zero_observed_fraction
+3 h to 2 h,0,0.0,0.0,0.0,0.0
+2 h to 1 h,0,0.0,0.0,0.0,0.0
+1 h to 30 min,0,0.0,0.0,0.0,0.0
+30 min to 15 min,0,0.0,0.0,0.0,0.0

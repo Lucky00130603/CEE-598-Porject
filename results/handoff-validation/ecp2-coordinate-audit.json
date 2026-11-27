@@ -1,0 +1,91 @@
+{
+  "projection": {
+    "grid_mapping_name": "stereographic",
+    "longitude_of_projection_origin": "263",
+    "latitude_of_projection_origin": "90",
+    "scale_factor_at_projection_origin": "0.9330127018922193",
+    "earth_radius": "6371229",
+    "false_easting": "4700000",
+    "false_northing": "8400000"
+  },
+  "inverse_projection_max_abs_degrees": [
+    1.0977885267493548e-11,
+    7.105427357601002e-14
+  ],
+  "pr": {
+    "filename": "pr_ECP2_hadcm3_2038_2070_checked.nc",
+    "dimensions": [
+      "time",
+      "yc",
+      "xc"
+    ],
+    "shape": [
+      96424,
+      20,
+      13
+    ],
+    "units": "kg m-2 s-1",
+    "time_units": "hours since 1900-01-01 00:00:00",
+    "calendar": "proleptic_gregorian",
+    "endpoints": [
+      "2038-01-01 03:00:00",
+      "2071-01-01 00:00:00"
+    ],
+    "original_coordinate_difference_degrees": [
+      0.0,
+      0.0
+    ],
+    "payload_mask_time_unchanged": true
+  },
+  "tasmax": {
+    "filename": "tasmax_ECP2_hadcm3_2038_2070_checked.nc",
+    "dimensions": [
+      "time",
+      "yc",
+      "xc"
+    ],
+    "shape": [
+      12053,
+      20,
+      13
+    ],
+    "units": "K",
+    "time_units": "hours since 1900-01-01 00:00:00",
+    "calendar": "proleptic_gregorian",
+    "endpoints": [
+      "2038-01-01 06:00:00",
+      "2070-12-31 06:00:00"
+    ],
+    "original_coordinate_difference_degrees": [
+      0.8087197825080281,
+      0.220700649331107
+    ],
+    "payload_mask_time_unchanged": true
+  },
+  "tasmin": {
+    "filename": "tasmin_ECP2_hadcm3_2038_2070_checked.nc",
+    "dimensions": [
+      "time",
+      "yc",
+      "xc"
+    ],
+    "shape": [
+      12053,
+      20,
+      13
+    ],
+    "units": "K",
+    "time_units": "hours since 1900-01-01 00:00:00",
+    "calendar": "proleptic_gregorian",
+    "endpoints": [
+      "2038-01-01 06:00:00",
+      "2070-12-31 06:00:00"
+    ],
+    "original_coordinate_difference_degrees": [
+      0.8087197825080281,
+      0.220700649331107
+    ],
+    "payload_mask_time_unchanged": true
+  },
+  "2041_max_absolute_difference_inches": 0.0
+}
