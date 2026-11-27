@@ -1,0 +1,3 @@
+model,period,first_year,last_year,latitude,longitude
+ECP2_hadcm3,historical,1971,2000,40.2208137512207,-88.13803100585938
+ECP2_hadcm3,future,2041,2070,40.22177719874009,-88.13537661158917

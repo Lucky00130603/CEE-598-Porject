@@ -1,0 +1,6 @@
+model,period,duration_min,valid_years,return_period_years,intensity_in_per_hour
+ECP2_hadcm3,historical,180,1,2.0,0.4498582681020101
+ECP2_hadcm3,historical,120,1,2.0,0.6014328598976135
+ECP2_hadcm3,historical,60,1,2.0,0.9139358401298523
+ECP2_hadcm3,historical,30,1,2.0,1.372096300125122
+ECP2_hadcm3,historical,15,1,2.0,1.934093713760376

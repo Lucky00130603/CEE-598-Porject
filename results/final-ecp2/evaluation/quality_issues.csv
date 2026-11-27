@@ -1,0 +1,5 @@
+task,input_gt_daily,target_gt_daily,temperature_inversion,removed_union
+3 h to 2 h,15180,10148,213,15385
+2 h to 1 h,7891,931,294,8180
+1 h to 30 min,9106,3907,61,9167
+30 min to 15 min,2518,19,181,2699
