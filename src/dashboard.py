@@ -1,0 +1,94 @@
+"""Open a loopback browser page for an ongoing or completed project run."""
+
+import argparse
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from threading import Timer
+import webbrowser
+
+
+HTML = """<!doctype html>
+<html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CEE 598 · Precipitation downscaling</title>
+<style>
+body{font:16px system-ui;margin:0;color:#162639;background:#ecf2f4}
+main{max-width:1020px;margin:auto;padding:32px 20px}
+h1{margin:0;font-size:clamp(24px,5vw,40px)}
+h2{font-size:20px}
+header{padding:0 0 20px}
+section{background:white;border-radius:12px;padding:16px 20px;margin:14px 0;overflow:auto}
+ul{padding-left:20px} li{margin:4px 0} code{font-size:14px}
+a{color:#035a75} img{max-width:100%}
+table{border-collapse:collapse;text-align:right;width:100%;white-space:nowrap}
+th,td{padding:7px 10px;border-bottom:1px solid #d4e0e5}
+th:first-child,td:first-child{text-align:left}
+</style>
+<main><header><h1>Illinois precipitation downscaling</h1>
+<p>CEE 598 &nbsp;·&nbsp; NOAA station models and NARCCAP grid results</p></header>
+<section><h2>Run status</h2><p id="state">Waiting for the project command.</p><ul id="events"></ul></section>
+<section id="metricsBlock" hidden><h2>NOAA test metrics</h2><table id="metrics"></table></section>
+<section id="figuresBlock" hidden><h2>Results and files</h2><ul id="files"></ul><div id="figures"></div></section></main>
+<script>
+const get = id => document.getElementById(id);
+function node(tag, text) {const x = document.createElement(tag); x.textContent = text; return x;}
+let last = '';
+async function refresh() {
+  try {
+    const r = await fetch('status.json', {cache:'no-store'});
+    if (!r.ok) return;
+    const raw = await r.text();
+    if (raw === last) return;
+    const d = JSON.parse(raw); last = raw;
+    get('state').textContent = d.state + ' · ' + d.updated;
+    get('events').replaceChildren(...d.events.slice(-12).map(x => node('li',x)));
+    const cols = ['task','retained','test','MAE (in)','RMSE (in)','R²','scaling R²'];
+    const metrics = get('metrics');
+    metrics.replaceChildren();
+    if (d.metrics.length) {
+      const head = metrics.insertRow(); head.append(...cols.map(x=>node('th',x)));
+      d.metrics.forEach(row=>metrics.insertRow().append(...row.map(x=>node('td',x))));
+    }
+    get('metricsBlock').hidden = !d.metrics.length;
+    get('files').replaceChildren(...d.files.map(f=>{
+      const li = node('li',''); const a = node('a',f); a.href = f; li.append(a); return li;
+    }));
+    get('figures').replaceChildren(...d.files.filter(f=>f.endsWith('.png')).map(f=>{
+      const img = node('img',''); img.src = f + '?v=' + encodeURIComponent(d.updated); img.alt = f; return img;
+    }));
+    get('figuresBlock').hidden = !d.files.length;
+  } catch (_) { /* A later refresh can read the next status update. */ }
+}
+refresh(); setInterval(refresh, 2500);
+</script></html>"""
+
+
+class QuietHandler(SimpleHTTPRequestHandler):
+    def log_message(self, format, *args):
+        pass
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--run-dir", type=Path, default=Path("results/final"))
+    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--no-open", action="store_true")
+    args = parser.parse_args()
+    root = args.run_dir.resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "index.html").write_text(HTML, encoding="utf-8")
+    handler = partial(QuietHandler, directory=str(root))
+    with ThreadingHTTPServer(("127.0.0.1", args.port), handler) as server:
+        url = f"http://127.0.0.1:{server.server_port}/"
+        print(f"Dashboard {url}", flush=True)
+        if not args.no_open:
+            Timer(0.2, webbrowser.open, args=(url,)).start()
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+
+
+if __name__ == "__main__":
+    main()

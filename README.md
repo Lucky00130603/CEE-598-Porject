@@ -2,6 +2,8 @@
 
 This repository contains the data-processing, training, and evaluation workflow for a CEE 598 project on temporal downscaling of precipitation in Illinois.
 
+For a new computer, start with the [execution handoff](PROJECT_HANDOFF.md). It covers data placement, four-model training, NARCCAP inference, and the local results dashboard.
+
 ## Project objective
 
 Four regression models are trained independently and will ultimately be applied sequentially:
@@ -23,7 +25,7 @@ Each model uses four predictors: precipitation at the preceding longer duration,
 - All four baseline ANNs have completed preliminary training.
 - The held-out test-set R-squared values range from 0.902 to 0.965.
 - Reproducible data summaries, metrics, diagnostics, and figures are available in [`results/report2`](results/report2).
-- Spatial predictors and application to NARCCAP simulations remain future work; the current paired files do not yet include station coordinates or neighboring-station features.
+- The handoff adds NARCCAP inference, annual maxima and an empirical IDF preview, as well as a spatial training entry point. The current paired files still need station metadata for the spatial experiment.
 
 These are preliminary progress-report results, not finalized scientific estimates.
 
@@ -108,8 +110,8 @@ Each task writes `model.pt`, `metrics.json`, `predictions.csv`, `history.csv`, a
 
 ```bash
 python scripts/summarize_report2.py \
-  --output-root results/training \
-  --summary-dir results/report2
+  --input-root results/training \
+  --output results/report2
 ```
 
 ## Run tests

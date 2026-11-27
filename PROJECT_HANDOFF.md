@@ -1,0 +1,170 @@
+# CEE 598 降水时间降尺度交接手册
+
+_供新电脑和没有原对话记录的协作者使用。命令从本仓库根目录运行。_
+
+---
+
+## 📋 项目目标和完成标准
+
+用伊利诺伊州 NOAA 站点观测训练四个独立 MLP，依次学习 `3 h → 2 h → 1 h → 30 min → 15 min`，再将四个模型串联应用到 NARCCAP 历史和未来期网格。每个 MLP 保留四个输入：上一级雨深、日雨深、日最高温、日最低温。模型是 4 输入、10 个 sigmoid 隐层单元、1 个线性输出。项目指导教师要求交代数据是否已取得、预处理过程、有效样本数、特征及回归标签统计，并用实际训练、初步结果、失败和原因说明进度。教师也要求说明 MLP 如何接收空间关系，见下方空间实验。
+
+完成基线的证据包括四套站点测试指标、历史及未来网格预测、年度最大值和本地展示页面。空间模型的证据包括数据覆盖表、有无空间特征的同样本对照和站点留出结果。极端降水分析要注明年份范围、有效年数及降尺度输出的含义。
+
+```mermaid
+flowchart LR
+    accTitle: Illinois downscaling workflow
+    accDescr: NOAA station data train four MLPs. NARCCAP grids pass through the cascade to produce annual maxima and browser results.
+    noaa["NOAA 四个配对表"] --> train_model["质控、训练、留出验证"]
+    train_model --> checkpoints["四份模型权重"]
+    narccap["NARCCAP 降水和温度"] --> align_inputs["检查时间、网格、单位"]
+    checkpoints --> cascade["逐级估计短历时雨深"]
+    align_inputs --> cascade
+    cascade --> maxima["年度最大值及经验 IDF"]
+    train_model --> dashboard["本地浏览器页面"]
+    maxima --> dashboard
+```
+
+## 📦 数据放在哪里
+
+| 数据 | 在新电脑的位置 | 来源与状态 |
+|---|---|---|
+| **NOAA 四套配对表** | `data/noaa data.zip` | 随 Git 克隆。首次训练自动提取到 `data/processed/noaa_pairs/` |
+| **NARCCAP NetCDF** | `data/raw/narccap/` | 从 Oscar 的 SharePoint 下载原名 `*_checked.nc`。保留原名，子目录也可 |
+| **空间站点元数据** | `data/raw/noaa_stations.csv` | 向 NOAA 数据负责人取得。需要真实 `STATION,latitude,longitude,elevation`，站点 ID 和配对表一致 |
+| **原始站点连续记录** | `data/raw/noaa/` | 如要核验连续时序或重建训练配对，取得原始小时和 15 分钟观测、日汇总和质量标记 |
+| **已训练权重** | `results/<run>/training/<task>/model.pt` | 可在新电脑重新生成。也可私下复制四个原始任务目录并用 `--weights` 指向其父目录 |
+
+NOAA 配对表列为 `STATION,timestamp,P_in,P_target,P_d,Tmax_d,Tmin_d`。雨深按英寸、温度按华氏度使用。原始四表共 1,630,093 行，原质控后 1,594,662 行。Report II 的行数、零值比例、均值、99 分位和最大值见 [已有结果](results/report2/dataset_summary.csv)。既有 (R^2) 是随机记录拆分的结果，应用到新站点或未来年份前须另行评估。
+
+SharePoint 的目录核对显示 24 个 NetCDF，四个模式 × 两个时期 × 三个变量。三小时 `pr`、日 `tasmax`、日 `tasmin` 分开保存。先下载 ECP2–HadCM3 的六个文件即可试跑历史和未来，随后再处理其它模式。实际日期和网格由运行时检查。[^1]
+
+| CLI 模型 | 文件名内模型 | 历史文件标称年份 | 未来文件标称年份 |
+|---|---|---|---|
+| **`ecp2`** | `ECP2_hadcm3` | 1968–2000 | 2038–2070 |
+| **`hrm3`** | `HRM3_gfdl` | 1968–2000 | 2038–2070 |
+| **`crcm`** | `CRCM_cgcm3` | 1968–2000 年 11 月 | 2038–2070 年 11 月 |
+| **`mm5i`** | `MM5I_ccsm` | 1968–1998 | 2038–2069 |
+
+默认项目窗口是 1971–2000 和 2041–2070。ECP2 和 HRM3 可优先尝试原窗口。四模式同窗比较可先检查 1971–1998、2041–2069 是否在四套实际文件中都完整，然后用相同窗口重新跑每个模型。各模式的原生网格保持独立。上传文件名中的年份只用于初步筛选。
+
+## 💻 在新电脑准备环境
+
+安装 Git 和 Python 3.11 或 3.12。当前 PyTorch MLP 使用 CPU。新机器先用 `--threads 4`，再按实测调整。运行前确认可访问 GitHub 以及 Oscar 的共享目录。项目数据和结果都用相对路径，仓库可以放在任意目录。
+
+### macOS 或 Linux
+
+```bash
+git clone https://github.com/Lucky00130603/CEE-598-Porject.git
+cd CEE-598-Porject
+git switch handoff/cee598
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m pytest -q
+mkdir -p data/raw/narccap
+```
+
+### Windows PowerShell
+
+```powershell
+git clone https://github.com/Lucky00130603/CEE-598-Porject.git
+cd CEE-598-Porject
+git switch handoff/cee598
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pytest -q
+New-Item -ItemType Directory -Force data/raw/narccap
+```
+
+PowerShell 的可执行文件路径以 `.` 加反斜线开头，写作 `.\.venv\Scripts\python.exe`。下文所有 `python` 命令都可用这一完整写法替换。两个终端都在同一个仓库根目录。若已克隆仓库，先执行 `git fetch origin`，再切交接分支。
+
+## 🧪 训练、检查和预测
+
+### 1. 打开浏览器页面
+
+终端 A 保持运行。此命令会尝试打开默认浏览器。也可以在新电脑上手动访问 [本地页面](http://127.0.0.1:8765/)。页面自动刷新，显示当前阶段、epoch、训练及验证损失、NOAA 指标、结果图和文件链接。
+
+```bash
+python -m src.dashboard --run-dir results/final-ecp2
+```
+
+若没有 GUI，可用 `--no-open` 并在运行机器的浏览器打开地址。换其他 run 名称时两个终端都要使用新名称。若端口占用，给页面命令加 `--port 8766`。运行目录和端口只在运行的电脑上有效。
+
+### 2. 训练 NOAA 基线
+
+终端 B 执行。四个任务顺序运行，默认使用 60 个 epoch 上限、patience 8、Adam 学习率 0.003、batch 4096，特征和标签均用训练集统计量标准化。首次直接读取仓库 ZIP。测试显示四个任务成功后，检查浏览器里的表格和图。先试装环境可改 `--epochs 1 --run-dir results/smoke`。
+
+```bash
+python -m src.project train --run-dir results/final-ecp2 --threads 4
+```
+
+`--split station` 生成未见站点的评估。建议单独放在 `results/station-baseline` 以保留两种拆分。四个 MLP 均输出 `model.pt`、`metrics.json`、`history.csv`、`data_summary.json` 和 `predictions.csv`。四张预测 CSV 对应 NOAA 测试集。最终 NARCCAP 预测另存 NetCDF。
+
+### 3. 先检查 NetCDF
+
+从 SharePoint 把六个 ECP2 文件放入 `data/raw/narccap/`。下面两条命令列出原始轴、单位和覆盖，并验证变量网格是否对齐。
+
+```bash
+python -m src.climate --model ecp2 --period historical
+python -m src.climate --model ecp2 --period future
+```
+
+如果 `pr` 有净长三小时的 time bounds，程序使用左端点。若报 `pr has no time bounds`，根据源文件或 Oscar 的处理记录确认时间戳代表区间开始、中心还是结束，分别给检查和预测命令加 `--stamp start|center|end` 中的一个选项。仅看时刻间隔无法区分整三小时间隔的起点和终点。日最高、最低温按日期与降水匹配，`pr` 按已确认单位转三小时英寸，温度转华氏度。日雨深取同一日八个三小时累计值之和。程序会拒绝未知单位、未对齐网格、重复时间或指定年份内的时间缺口；有缺测的格点年份不会进入年最大值。
+
+### 4. 执行 NARCCAP 预跑和正式运行
+
+先用 ECP2 检查一个完整年份。以下命令假设时间 bounds 已确认；若第三步要求 `--stamp`，此处也要加已确认的值。
+
+```bash
+python -m src.project predict --model ecp2 --period historical --historical-years 1971 1971 --weights results/final-ecp2/training --run-dir results/pilot-ecp2
+python -m src.project predict --model ecp2 --period both --run-dir results/final-ecp2 --save-windows
+```
+
+预跑页面用 `python -m src.dashboard --run-dir results/pilot-ecp2 --port 8766`。正式命令从同名 `run-dir` 的 `training/` 自动找权重。立刻使用旧权重时，用 `--weights /path/to/the/four/task-folders`。也可用 `python -m src.project all --model ecp2 --run-dir results/final-ecp2` 从头做训练及推理。每次运行的进度存 `status.json`。同时跑不同项目时使用独立的输出目录。四模型用同一时间窗口时，在各自目录执行并加入 `--historical-years 1971 1998 --future-years 2041 2069`，以实际检查结果为准。
+
+## 📊 结果和老师要看的证据
+
+| 产物 | 路径（相对 run-dir） | 用途 |
+|---|---|---|
+| **数据和模型诊断** | `evaluation/*.csv`、`evaluation/*.png` | 样本数、标签统计、基线、损失曲线、负预测和大雨表现 |
+| **气候预测** | `<model>/<period>/window_depths.nc` | 加 `--save-windows` 后输出，每个三小时窗口对应五个历时 |
+| **年最大值** | `<model>/<period>/annual_maxima.nc` | 按格点、年份和历时保存，并附有效窗口比例 |
+| **经验 IDF** | `empirical_idf.csv`、`empirical_idf.png`、`idf_grid_cells.csv` | 默认采用最靠近 Urbana 的格点，可用 `--site LAT LON` 改位置 |
+| **页面和日志** | `index.html`、`status.json` | 显示进度、结果图和数据链接 |
+
+串联推理对每个三小时窗口输出一组嵌套历时雨深，同时保留原始三小时量。干窗输出零，湿窗约束在 0 和上一级雨深之间。一个三小时窗口只产生一个 15 分钟历时雨深估计，窗口内实际 15 分钟时序仍需另外建模和验证。年度最大值是各窗口估计的最大值。经验 IDF 依降序名次 (m) 和有效年数 (n) 计算 (T=(n+1)/m)，并把雨深除以历时小时数。用已有年份的经验重现期解释这张图。超出样本范围的设计重现期需要另做分布拟合、不确定性和观测验证。
+
+报告中至少列出各模型的 station count、原始和有效样本量、回归特征及目标统计、基线和验证类型。有代表性的已知限制包括 3 h → 2 h 的 ANN 与时长缩放基线接近，少量幅度很小的负输出，以及 30 min → 15 min 在大雨尾部的指标下降。四张 NOAA 配对表中所有零目标行的 `P_in` 也为零。若要验证完整降水过程，回访 NOAA 原始记录，区分缺测、干窗和粗窗为湿但局部短窗为干。NARCCAP 历法修补可能改变降水极端值。正式比较前应向 Oscar 取得缺测/插补审计，记录哪些年份及格点受影响。[^1]
+
+## 🗺️ 空间实验
+
+按原计划，把经纬度、高程、五个最近邻在同一时刻的 `P_in` 反距离加权均值、最大值和标准差作为六个额外输入。实现使用五个固定地理邻站，只保留同时有五个邻站可用的样本。缺测与真实零值分别处理。
+
+```bash
+python -m src.spatial --pairs data/processed/noaa_pairs --stations data/raw/noaa_stations.csv --out data/processed/noaa_spatial
+python scripts/train_all.py --data-dir data/processed/noaa_spatial --split station --epochs 60 --patience 8 --batch-size 4096 --learning-rate 0.003 --output-root results/spatial-matched-baseline
+python scripts/train_all.py --data-dir data/processed/noaa_spatial --spatial --split station --epochs 60 --patience 8 --batch-size 4096 --learning-rate 0.003 --output-root results/spatial-mlp
+```
+
+两次训练用同一张增强表、同一默认 seed。空间特征完整的表由 `src.spatial` 写出。报告保留率、实际留出的站点和测试表现。邻站只使用粗时段输入。站点留出衡量已知邻站观测可用时对新目标站的泛化。如果要评估整个未知区域，应额外在空间分区内屏蔽不可用的邻站。空间 MLP 的气候应用还需匹配网格高程和邻网格粗时段降水，以及证明训练和应用特征含义一致。现有 NARCCAP 推理入口接收四输入基线权重。
+
+## 🔧 无上下文交接和故障检查
+
+| 现象 | 检查 |
+|---|---|
+| **找不到配对表** | 从仓库根目录运行，并确认 Git 已克隆 `data/noaa data.zip` |
+| **缺失或重复 NetCDF** | 下载每个模型各期的三变量原名文件，避免同一文件在两个子目录重复 |
+| **指定年份缺失** | 核对日志的第一个缺失时间和数据处理记录，选择完整年份。不得补零来通过检查 |
+| **模型推理找不到权重** | 先训练，或把 `--weights` 指定为含四个任务子目录的父目录 |
+| **网页一直等待** | 两终端使用同一个 `--run-dir`，打开 127.0.0.1 的地址并让页面服务保持运行 |
+| **空间样本不足** | 记录五邻站匹配后保留率，回查 NOAA 站点覆盖和时间对齐 |
+
+原始 Report II 四组训练在 Apple M5 MacBook Air（24 GB）的本地 checkout 执行，仓库根目录为 `CEE492-Codex/cee598_report2_work/repo`，项目通过相对路径在任何机器上运行。交接分支增加了可见的本地 Dashboard、NetCDF 预测和空间实验入口。在新电脑上请打开运行页面展示实际过程，保存最终 `results/<run>/`，把模式、年份、时间戳约定、测试结果及运行路径写入最终汇报。
+
+交接验证在同一台 Mac 使用 Python 3.12。真实 NOAA 四任务各跑了 1 个 epoch，验证了四套测试指标、九个诊断产物和本地页面读取。NetCDF 串联、闰年、缺测处理和经验 IDF 使用合成数据测试。Oscar 的完整气候实跑与有真实站点元数据的空间实验安排在新电脑。
+
+可以把下面这段直接交给另一台电脑的 Codex。
+
+> 这是 CEE 598 Illinois 降水时间降尺度项目。克隆 `Lucky00130603/CEE-598-Porject` 并切换 `handoff/cee598`，完整阅读 `PROJECT_HANDOFF.md`。在当前机器上建 Python 环境并跑测试。先打开本地 Dashboard 并保持页面可见。使用仓库 NOAA ZIP 训练四个 MLP，保留日最高和最低温。用 Oscar 的 NARCCAP 文件优先检查 ECP2 历史和未来的三变量，验明时间戳、网格和单位后先跑一年，成功后运行完整时段。展示页面、实际输出路径、覆盖年份和遇到的问题。空间和 IDF 按手册说明操作，所有真实完成的步骤以日志和结果文件为准。
+
+[^1]: Oscar 的 [NARCCAP 数据说明](data/NARCCAP/README.md)。请使用团队现有的 SharePoint 访问权限。如果新电脑无法读取目录，请向 Oscar 索取共享入口。

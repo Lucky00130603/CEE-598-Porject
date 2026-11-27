@@ -3,3 +3,5 @@ pandas>=2.0
 scikit-learn>=1.3
 torch>=2.1
 pytest>=7.4
+matplotlib>=3.8
+netCDF4>=1.7

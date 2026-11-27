@@ -61,6 +61,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--progress", action="store_true")
     return parser.parse_args()
 
 
@@ -76,10 +77,9 @@ def detect_schema(
     """Return features, target, station column, input column, and schema name."""
     pair_required = {*PAIR_FEATURES, "P_target"}
     if pair_required.issubset(frame.columns):
-        if spatial:
-            raise ValueError("Pair files do not yet contain spatial predictor columns")
         station = "STATION" if "STATION" in frame.columns else None
-        return PAIR_FEATURES.copy(), "P_target", station, "P_in", "paired"
+        features = [*PAIR_FEATURES, *SPATIAL_FEATURES] if spatial else PAIR_FEATURES.copy()
+        return features, "P_target", station, "P_in", "paired"
 
     source, target = TASKS[task]
     features = [source, *DAILY_FEATURES]
@@ -317,6 +317,8 @@ def main() -> None:
                 "validation_loss": val_loss,
             }
         )
+        if args.progress and (epoch == 1 or epoch % 5 == 0 or epoch == args.epochs):
+            print(f"Epoch {epoch}/{args.epochs}: train MSE {total_loss / total_items:.5f}, validation MSE {val_loss:.5f}", flush=True)
 
         if val_loss < best_loss - 1e-7:
             best_loss = val_loss
@@ -381,6 +383,10 @@ def main() -> None:
         "station_count": int(frame[station_column].nunique())
         if station_column is not None
         else None,
+        "station_ids_by_split": {
+            name: sorted(frame.iloc[indices][station_column].astype(str).unique().tolist())
+            for name, indices in (("train", train_idx), ("validation", val_idx), ("test", test_idx))
+        } if station_column is not None else None,
         "timestamp_start": str(pd.to_datetime(frame["timestamp"]).min())
         if "timestamp" in frame.columns
         else None,
